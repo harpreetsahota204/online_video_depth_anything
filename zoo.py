@@ -238,9 +238,17 @@ class OVDAModel(Model, SamplesMixin, SupportsGetItem, TorchModelMixin):
         dmax = float(depth.max())
         depth_norm = (depth - dmin) / (dmax - dmin + 1e-8)
 
+        # Floor at a small epsilon so relu-clipped pixels (depth == 0) render
+        # as the coldest colormap color rather than transparent in the FiftyOne
+        # app, which uses the heatmap value as overlay opacity.
+        depth_norm = np.clip(depth_norm, 0.05, 1.0)
+
+        # uint8 [0, 255] is sufficient for display and 4x smaller than float32.
+        depth_uint8 = (depth_norm * 255).astype(np.uint8)
+
         # 1-indexed frame numbers to match FiftyOne's frame convention.
         return {
-            t + 1: fo.Heatmap(map=depth_norm[t].astype(np.float32))
+            t + 1: fo.Heatmap(map=depth_uint8[t])
             for t in range(len(depth_norm))
         }
 
@@ -281,10 +289,13 @@ class OVDAModel(Model, SamplesMixin, SupportsGetItem, TorchModelMixin):
 
             dmin = float(depth.min())
             dmax = float(depth.max())
-            depth_norm = (depth - dmin) / (dmax - dmin + 1e-8)
+            depth_norm = np.clip(
+                (depth - dmin) / (dmax - dmin + 1e-8), 0.05, 1.0
+            )
+            depth_uint8 = (depth_norm * 255).astype(np.uint8)
 
             results.append({
-                t + 1: fo.Heatmap(map=depth_norm[t].astype(np.float32))
+                t + 1: fo.Heatmap(map=depth_uint8[t])
                 for t in range(len(depth_norm))
             })
 
