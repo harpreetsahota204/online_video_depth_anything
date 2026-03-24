@@ -21,12 +21,8 @@
                     "torch",
                     "torchvision",
                     "einops",
-                    "opencv-python",
-                    "imageio",
-                    "imageio-ffmpeg",
                     "natsort",
                     "easydict",
-                    "tqdm",
                     "huggingface_hub"
                 ],
                 "cpu": {
@@ -56,12 +52,8 @@
                     "torch",
                     "torchvision",
                     "einops",
-                    "opencv-python",
-                    "imageio",
-                    "imageio-ffmpeg",
                     "natsort",
                     "easydict",
-                    "tqdm",
                     "huggingface_hub"
                 ],
                 "cpu": {

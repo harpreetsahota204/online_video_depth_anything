@@ -198,33 +198,78 @@ class OVDAModel(Model, SamplesMixin, SupportsGetItem, TorchModelMixin):
     # ------------------------------------------------------------------
 
     def predict(self, arg, sample=None):
-        """Single-video inference.  Delegates to predict_all."""
-        return self.predict_all([arg])[0]
+        """Single-video inference.
+
+        FiftyOne's _apply_video_model passes an FFmpegVideoReader as ``arg``
+        and the raw fo.Sample as ``sample`` (because SamplesMixin sets
+        needs_samples=True).  We ignore the reader and load the video
+        ourselves from ``sample.filepath`` so the full frame sequence is
+        available for the temporal cache.
+
+        Parameters
+        ----------
+        arg : etav.FFmpegVideoReader
+            Passed by FiftyOne; not used directly.
+        sample : fo.Sample
+            The FiftyOne sample; provides ``.filepath``.
+
+        Returns
+        -------
+        dict[int, fo.Heatmap]
+            Frame-number (1-indexed) → Heatmap mapping.
+            FiftyOne's sample.add_labels() stores each entry at
+            sample.frames[t][label_field].
+        """
+        filepath = sample.filepath
+        frames = load_video_as_numpy(filepath)
+
+        # depth: np.ndarray (1, T, H, W) — batch dimension is always 1
+        depth = self._model.infer_video_depth(
+            frames,
+            device=self._device,
+            preprocess_device="cpu",
+            input_size=self._input_size,
+            fp32=self._fp32,
+        )
+        depth = depth[0]  # (T, H, W)
+
+        # Normalise globally across the video for temporal consistency.
+        dmin = float(depth.min())
+        dmax = float(depth.max())
+        depth_norm = (depth - dmin) / (dmax - dmin + 1e-8)
+
+        # 1-indexed frame numbers to match FiftyOne's frame convention.
+        return {
+            t + 1: fo.Heatmap(map=depth_norm[t].astype(np.float32))
+            for t in range(len(depth_norm))
+        }
 
     def predict_all(self, batch, preprocess=None, samples=None):
-        """Process a batch of video filepaths.
+        """Process a batch of videos.
+
+        Note: for video models FiftyOne's _apply_video_model always calls
+        predict() directly (one video at a time) and ignores batch_size /
+        num_workers.  This method is provided for completeness and direct use.
 
         Parameters
         ----------
         batch : list[str]
-            Filepaths produced by OVDAGetItem.
+            Video filepaths.
         preprocess : bool or None
-            Unused; preprocessing is always applied inside infer_video_depth.
+            Unused.
         samples : list[fo.Sample] or None
-            Raw FiftyOne samples supplied by SamplesMixin.  Not needed here
-            because all required data (filepath) is already in ``batch``.
+            Unused; filepaths come from ``batch``.
 
         Returns
         -------
-        list[list[fo.Heatmap]]
-            One inner list per video, containing one fo.Heatmap per frame.
-            FiftyOne stores ``result[i][t]`` at ``samples[i].frames[t+1]``.
+        list[dict[int, fo.Heatmap]]
+            One dict per video; each dict maps 1-indexed frame numbers to
+            fo.Heatmap depth predictions.
         """
         results = []
         for filepath in batch:
             frames = load_video_as_numpy(filepath)
 
-            # depth: np.ndarray (1, T, H, W)  – batch dimension is always 1
             depth = self._model.infer_video_depth(
                 frames,
                 device=self._device,
@@ -234,15 +279,13 @@ class OVDAModel(Model, SamplesMixin, SupportsGetItem, TorchModelMixin):
             )
             depth = depth[0]  # (T, H, W)
 
-            # Normalise globally across the video for temporal consistency.
             dmin = float(depth.min())
             dmax = float(depth.max())
             depth_norm = (depth - dmin) / (dmax - dmin + 1e-8)
 
-            heatmaps = [
-                fo.Heatmap(map=depth_norm[t].astype(np.float32))
+            results.append({
+                t + 1: fo.Heatmap(map=depth_norm[t].astype(np.float32))
                 for t in range(len(depth_norm))
-            ]
-            results.append(heatmaps)
+            })
 
         return results
