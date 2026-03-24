@@ -33,6 +33,11 @@ from .zoo import OVDAModel
 # Per-variant configuration
 # ---------------------------------------------------------------------------
 
+# The actual HuggingFace repo that hosts both checkpoints.
+# base_name in manifest.json carries the variant suffix (e.g. "FriedFeid/oVDA-c16")
+# so FiftyOne can distinguish the two models; we strip the suffix here for downloads.
+_HF_REPO = "FriedFeid/oVDA"
+
 # Keys accepted by onlineVideoDepthAnything.__init__
 _MODEL_INIT_KEYS = {
     "encoder", "features", "out_channels", "use_bn",
@@ -81,26 +86,27 @@ def download_model(model_name, model_path):
     FiftyOne calls this automatically the first time a model is loaded via
     foz.load_zoo_model().
 
-    Both checkpoints live in the same repo (FriedFeid/oVDA).  We use
-    hf_hub_download to fetch only the single .pth file needed for this
-    variant, then copy it into model_path so load_model can find it.
+    Both checkpoints live in the single repo _HF_REPO ("FriedFeid/oVDA").
+    The manifest base_name carries a variant suffix ("FriedFeid/oVDA-c16" or
+    "FriedFeid/oVDA-c8") so FiftyOne can distinguish the two models; we infer
+    which .pth to fetch from that suffix and download only that file.
 
     Parameters
     ----------
     model_name : str
-        ``base_name`` from manifest.json — always ``"FriedFeid/oVDA"``.
+        ``base_name`` from manifest.json, e.g. ``"FriedFeid/oVDA-c16"``.
     model_path : str
-        Local directory path derived from ``base_filename`` in manifest.json,
-        e.g. ``".../FriedFeid-oVDA-c16"`` or ``".../FriedFeid-oVDA-c8"``.
+        Local directory path derived from ``base_filename``,
+        e.g. ``".../FriedFeid-oVDA-c16"``.
     """
     from huggingface_hub import hf_hub_download
 
-    cfg = _CONFIGS[_infer_config(model_path)]
+    cfg = _CONFIGS[_infer_config(model_name)]
     filename = cfg["checkpoint"]  # "oVDA_c16.pth" or "oVDA_c8.pth"
 
-    # hf_hub_download caches to ~/.cache/huggingface by default; we then
-    # copy the file into FiftyOne's managed model_path directory.
-    cached = hf_hub_download(repo_id=model_name, filename=filename)
+    # hf_hub_download caches to ~/.cache/huggingface; copy into FiftyOne's
+    # managed model_path directory so load_model can find it by convention.
+    cached = hf_hub_download(repo_id=_HF_REPO, filename=filename)
 
     os.makedirs(model_path, exist_ok=True)
     dest = os.path.join(model_path, filename)
@@ -137,9 +143,11 @@ def load_model(model_name=None, model_path=None, **kwargs):
     if os.path.isfile(model_path):
         # Direct path to a .pth file — infer config from the filename.
         ckpt_path = model_path
-        config_key = _infer_config(model_path)
+        config_key = _infer_config(model_name or model_path)
     else:
-        config_key = _infer_config(model_path)
+        # model_name carries the variant suffix when called by FiftyOne;
+        # fall back to model_path suffix for direct / manual calls.
+        config_key = _infer_config(model_name or model_path)
         cfg = _CONFIGS[config_key]
         ckpt_path = os.path.join(model_path, cfg["checkpoint"])
 

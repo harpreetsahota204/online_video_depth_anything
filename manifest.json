@@ -3,7 +3,7 @@
     "url": "https://github.com/Kolkir/online-video-depth-anything",
     "models": [
         {
-            "base_name": "FriedFeid/oVDA",
+            "base_name": "FriedFeid/oVDA-c16",
             "base_filename": "FriedFeid-oVDA-c16",
             "author": "Heidelberg University",
             "license": "NC-SA-UHDV1.0",
@@ -34,7 +34,7 @@
             }
         },
         {
-            "base_name": "FriedFeid/oVDA",
+            "base_name": "FriedFeid/oVDA-c8",
             "base_filename": "FriedFeid-oVDA-c8",
             "author": "Heidelberg University",
             "license": "NC-SA-UHDV1.0",
