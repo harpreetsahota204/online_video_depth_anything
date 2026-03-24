@@ -1,0 +1,76 @@
+{
+    "name": "OnlineVideoDepthAnything",
+    "url": "https://github.com/Kolkir/online-video-depth-anything",
+    "models": [
+        {
+            "base_name": "FriedFeid/oVDA",
+            "base_filename": "FriedFeid-oVDA-c16",
+            "author": "Heidelberg University",
+            "license": "NC-SA-UHDV1.0",
+            "source": "https://huggingface.co/FriedFeid/oVDA",
+            "description": "Online Video Depth Anything (cache_size=16). Estimates temporally-consistent monocular depth for videos using a DINOv2 backbone with a rolling temporal cache. Outputs per-frame fo.Heatmap depth maps normalised to [0, 1].",
+            "tags": [
+                "depth-estimation",
+                "video",
+                "temporal",
+                "heatmap"
+            ],
+            "date_added": "2026-03-24",
+            "requirements": {
+                "packages": [
+                    "torch",
+                    "torchvision",
+                    "einops",
+                    "opencv-python",
+                    "imageio",
+                    "imageio-ffmpeg",
+                    "natsort",
+                    "easydict",
+                    "tqdm",
+                    "huggingface_hub"
+                ],
+                "cpu": {
+                    "support": true
+                },
+                "gpu": {
+                    "support": true
+                }
+            }
+        },
+        {
+            "base_name": "FriedFeid/oVDA",
+            "base_filename": "FriedFeid-oVDA-c8",
+            "author": "Heidelberg University",
+            "license": "NC-SA-UHDV1.0",
+            "source": "https://huggingface.co/FriedFeid/oVDA",
+            "description": "Online Video Depth Anything (cache_size=8). Lighter variant with a smaller temporal cache; faster and lower memory than c16 at some cost to temporal consistency.",
+            "tags": [
+                "depth-estimation",
+                "video",
+                "temporal",
+                "heatmap"
+            ],
+            "date_added": "2026-03-24",
+            "requirements": {
+                "packages": [
+                    "torch",
+                    "torchvision",
+                    "einops",
+                    "opencv-python",
+                    "imageio",
+                    "imageio-ffmpeg",
+                    "natsort",
+                    "easydict",
+                    "tqdm",
+                    "huggingface_hub"
+                ],
+                "cpu": {
+                    "support": true
+                },
+                "gpu": {
+                    "support": true
+                }
+            }
+        }
+    ]
+}
